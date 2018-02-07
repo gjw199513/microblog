@@ -19,3 +19,14 @@ OPENID_PROVIDERS = [
 
 
 
+basedir = os.path.abspath(os.path.dirname(__file__))
+# mysql数据配置
+# SQLALCHEMY_DATABASE_URI = "mysql+pymysql://root:gjw605134015@localhost:3306/microblog"
+# SQLALCHEMY_TRACK_MODIFICATIONS = True
+
+# sqlite数据库配置
+# 数据库文件路径
+SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'app.db')
+#  SQLAlchemy-migrate 数据文件存储
+SQLALCHEMY_MIGRATE_REPO = os.path.join(basedir, 'db_repository')
+SQLALCHEMY_TRACK_MODIFICATIONS = True
