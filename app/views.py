@@ -41,7 +41,7 @@ def index():
 def login():
     # 我们检查 g.user 是否被设置成一个认证用户，如果是的话将会被重定向到首页。
     # Flask 中的 g 全局变量是一个在请求生命周期中用来存储和共享数据。我敢肯定你猜到了，我们将登录的用户存储在这里(g)。
-    if g.user is not None and g.user.is_authenticated:
+    if g.user is not None and g.user.is_authenticated():
         # url_for以一种干净的方式为一个给定的视图函数获取URL
         return redirect(url_for('index'))
     form = LoginForm()
@@ -112,6 +112,5 @@ def before_request():
 def logout():
     logout_user()
     return redirect(url_for('index'))
-
 
 
