@@ -50,6 +50,18 @@ class User(db.Model):
         # hash前必须把数据转换成bytes类型
         return 'http://www.gravatar.com/avatar/' + md5(self.email.encode("utf-8")).hexdigest() + '?d=mm&s=' + str(size)
 
+    @staticmethod
+    def make_unique_nickname(nickname):
+        if User.query.filter_by(nickname=nickname).first():
+            return nickname
+        version = 2
+        while True:
+            new_nickname = nickname+str(version)
+            if User.query.filter_by(nickname=new_nickname).first():
+                break
+            version += 1
+        return new_nickname
+
     # 打印这个类的方式
     def __repr__(self):
         return '<User %r>' % (self.nickname)

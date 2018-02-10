@@ -6,7 +6,7 @@ __date__ = '2018/2/6 9:52'
 from flask import render_template, flash, redirect, session, url_for, request, g
 from flask.ext.login import login_user, logout_user, current_user, login_required
 from app import app, db, lm, oid
-from app.forms import LoginForm
+from app.forms import LoginForm, EditForm
 from app.models import User
 from datetime import datetime
 
@@ -80,6 +80,7 @@ def after_login(resp):
         if nickname is None or nickname == '':
             nickname = resp.email.split('@')[0]
         # 解决问题的方式就是让 User 类为我们选择一个唯一的名字
+        nickname = User.make_unique_nickname(nickname)
         user = User(nickname=nickname, email=resp.email)
         db.session.add(user)
         db.session.commit()
@@ -140,7 +141,7 @@ def user(nickname):
 @app.route('/edit', methods=['GET', 'POST'])
 @login_required
 def edit():
-    form = EditForm()
+    form = EditForm(g.user.nickname)
     if form.validate_on_submit():
         g.user.nickname = form.nickname.data
         g.user.about_me = form.about_me.data
@@ -153,3 +154,17 @@ def edit():
         form.about_me.data = g.user.about_me
     return render_template('edit.html', form=form)
 
+
+# 404错误
+@app.errorhandler(404)
+def internal_error(error):
+    return render_template('404.html'), 404
+
+
+# 500错误
+@app.errorhandler(500)
+def internal_error(error):
+    # 如果异常是被一个数据库错误触发，数据库的会话会处于一个不正常的状态，
+    # 因此我们必须把会话回滚到正常工作状态在渲染 500 错误页模板之前。
+    db.session.rollback()
+    return render_template('500.html'), 500
