@@ -8,6 +8,7 @@ from flask.ext.login import login_user, logout_user, current_user, login_require
 from app import app, db, lm, oid
 from app.forms import LoginForm
 from app.models import User
+from datetime import datetime
 
 
 @app.route('/')
@@ -41,7 +42,7 @@ def index():
 def login():
     # 我们检查 g.user 是否被设置成一个认证用户，如果是的话将会被重定向到首页。
     # Flask 中的 g 全局变量是一个在请求生命周期中用来存储和共享数据。我敢肯定你猜到了，我们将登录的用户存储在这里(g)。
-    if g.user is not None and g.user.is_authenticated():
+    if g.user is not None and g.user.is_authenticated:
         # url_for以一种干净的方式为一个给定的视图函数获取URL
         return redirect(url_for('index'))
     form = LoginForm()
@@ -78,6 +79,7 @@ def after_login(resp):
         nickname = resp.nickname
         if nickname is None or nickname == '':
             nickname = resp.email.split('@')[0]
+        # 解决问题的方式就是让 User 类为我们选择一个唯一的名字
         user = User(nickname=nickname, email=resp.email)
         db.session.add(user)
         db.session.commit()
@@ -105,6 +107,11 @@ def load_user(id):
 def before_request():
     # 所有请求将会访问到登录用户，即使在模版里
     g.user = current_user
+    # 这个函数可以用来在数据库中更新用户最后一次的访问时间
+    if g.user.is_authenticated:
+        g.user.last_seen = datetime.utcnow()
+        db.session.add(g.user)
+        db.session.commit()
 
 
 # 登出
@@ -113,4 +120,36 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
+
+@app.route('/user/<nickname>')
+@login_required
+def user(nickname):
+    user = User.query.filter_by(nickname=nickname).first()
+    if user == None:
+        flash('User ' + nickname + ' not found.')
+        return redirect(url_for('index'))
+    posts = [
+        {'author': user, 'body': 'Test post #1'},
+        {'author': user, 'body': 'Test post #2'}
+    ]
+    return render_template('user.html',
+                           user=user,
+                           posts=posts)
+
+
+@app.route('/edit', methods=['GET', 'POST'])
+@login_required
+def edit():
+    form = EditForm()
+    if form.validate_on_submit():
+        g.user.nickname = form.nickname.data
+        g.user.about_me = form.about_me.data
+        db.session.add(g.user)
+        db.session.commit()
+        flash('Your changes have been saved.')
+        return redirect(url_for('edit'))
+    else:
+        form.nickname.data = g.user.nickname
+        form.about_me.data = g.user.about_me
+    return render_template('edit.html', form=form)
 
